@@ -1,37 +1,34 @@
 import React, { useState } from 'react';
 import './App.css';
 
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+
 function App() {
   const [task, setTask] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const generatePrompt = () => {
+  const generatePrompt = async () => {
     if (!task.trim()) return;
+    setLoading(true);
+    setError('');
+    setPrompt('');
 
-    const p = `You are an AI agent tasked with the following objective:
-
-## Task
-${task.trim()}
-
-## Instructions
-- Analyze the task carefully and break it down into clear steps.
-- Use the tools and capabilities available to you to complete the task.
-- Verify your work at each step before proceeding to the next.
-- If you encounter errors, diagnose and fix them before continuing.
-- Provide clear reasoning for each action you take.
-- When the task is complete, summarize what was done and the results.
-
-## Constraints
-- Do not make assumptions beyond what is stated in the task.
-- If requirements are ambiguous, ask for clarification or state your assumptions.
-- Follow security best practices (do not expose secrets, keys, or sensitive data).
-- Only make changes that are directly relevant to the task.
-
-## Output
-- Provide a final summary of all actions taken and the outcome.
-- Include any relevant file paths, commands run, or configuration changes.`;
-
-    setPrompt(p);
+    try {
+      const res = await fetch(`${API_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: task.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate prompt');
+      setPrompt(data.prompt);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopy = async () => {
@@ -50,6 +47,7 @@ ${task.trim()}
   const handleClear = () => {
     setTask('');
     setPrompt('');
+    setError('');
   };
 
   return (
@@ -70,14 +68,20 @@ ${task.trim()}
             rows={6}
           />
           <div className="actions">
-            <button className="btn btn-primary" onClick={generatePrompt} disabled={!task.trim()}>
-              Generate Prompt
+            <button className="btn btn-primary" onClick={generatePrompt} disabled={!task.trim() || loading}>
+              {loading ? 'Generating...' : 'Generate Prompt'}
             </button>
             <button className="btn btn-secondary" onClick={handleClear}>
               Clear
             </button>
           </div>
         </section>
+
+        {error && (
+          <section className="output-section">
+            <div className="error-box">{error}</div>
+          </section>
+        )}
 
         {prompt && (
           <section className="output-section">
