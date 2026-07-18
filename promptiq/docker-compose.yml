@@ -1,8 +1,6 @@
 services:
   api:
     build: ./backend
-    ports:
-      - "5176:5176"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=gpt-4o-mini
